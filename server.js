@@ -22,7 +22,7 @@ const server = http.createServer((req, res) => {
       res.end("Welcome to FLUTTER CI");
       break;
     case "/build":
-      flutterBuild(req, res, body);
+      flutterBuild(req, res);
       break;
     case "/download":
       downloadAPK(req, res, url);
