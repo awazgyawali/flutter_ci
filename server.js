@@ -95,7 +95,7 @@ function flutterBuild(req, res) {
       var logs = "Started building!!!!!";
       ref.set(logs);
       child.stdout.on("data", function(data) {
-        // Logs are printed here one after another
+        console.log(data.toString());
         logs = logs + "/n" + data.toString();
         ref.set(logs);
       });
