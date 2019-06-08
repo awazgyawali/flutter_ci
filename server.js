@@ -1,6 +1,8 @@
 const http = require("http");
 var process = require("child_process");
 var admin = require("firebase-admin");
+var fileSystem = require("fs");
+var path = require("path");
 
 const hostname = "localhost";
 const port = 8080;
@@ -12,7 +14,52 @@ admin.initializeApp({
 });
 
 const server = http.createServer((req, res) => {
+  var url = req.url;
+  switch (url) {
+    case "/":
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/plain");
+      res.end("Welcome to FLUTTER CI");
+      break;
+    case "/build":
+      flutterBuild(req, res, body);
+      break;
+    case "/download":
+      downloadAPK(req, res, url);
+      break;
+    default:
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/plain");
+      res.end("Nothing here.");
+      break;
+  }
+});
+
+server.listen(port, hostname, () => {
+  console.log(`Server running at http://${hostname}:${port}/`);
+});
+
+function downloadAPK(req, res, url_string) {
+  var url = new URL(url_string);
+  var fileName = url.searchParams.get("name");
+  var projectName = url.searchParams.get("projectName");
+  var filePath = path.join(__dirname, `./Builds/${projectName}/${fileName}`);
+
+  var stat = fileSystem.statSync(filePath);
+
+  res.writeHead(200, {
+    "Content-Type": "text/json",
+    "Content-Length": stat.size,
+    "Content-Disposition": "attachment; filename=test.json"
+  });
+
+  var readStream = fileSystem.createReadStream(filePath);
+  readStream.pipe(res);
+}
+
+function flutterBuild(req, res) {
   var bodyList = [];
+
   req
     .on("data", chunk => {
       bodyList.push(chunk);
@@ -22,9 +69,8 @@ const server = http.createServer((req, res) => {
       var repoPath = body.repository.full_name;
       var b = repoPath.split("/");
       var repoName = b[b.length - 1];
-
-      var child = process.execFile("./ci_script", [repoPath]);
-
+      var fileName = repoName + `${new Date().toISOString()}.apk`;
+      var child = process.execFile("./ci_script", [repoPath, fileName]);
       var ref = admin
         .database()
         .ref("logs")
@@ -34,7 +80,6 @@ const server = http.createServer((req, res) => {
         .firestore()
         .collection("builds")
         .doc(ref.key);
-
       docRef.set({
         building: true,
         startedAt: new Date().getTime(),
@@ -47,7 +92,6 @@ const server = http.createServer((req, res) => {
           body: body.repository.name + " build started."
         }
       });
-
       var logs = "Started building!!!!!";
       ref.set(logs);
       child.stdout.on("data", function(data) {
@@ -76,6 +120,7 @@ const server = http.createServer((req, res) => {
         docRef.update({
           building: false,
           success: true,
+          fileName,
           endedAt: new Date().getTime()
         });
       });
@@ -83,8 +128,4 @@ const server = http.createServer((req, res) => {
       res.setHeader("Content-Type", "text/plain");
       res.end("Started Building apk");
     });
-});
-
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
-});
+}
