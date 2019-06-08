@@ -60,6 +60,8 @@ function downloadAPK(req, res, url_string) {
 function flutterBuild(req, res) {
   var bodyList = [];
 
+  console.log("This is a test");
+
   req
     .on("data", chunk => {
       bodyList.push(chunk);
