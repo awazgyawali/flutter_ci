@@ -1,1 +1,15 @@
-flutter doctor
+REPO_LINK=$1
+IFS='/' read -ra ADDR <<< "$REPO_LINK"
+REPO_NAME=${ADDR[-1]}
+cd ~/Projects
+rm -rf ~/Projects/$REPO_NAME
+git clone git@bitbucket.org:$REPO_LINK.git
+cd ~/Projects/$REPO_NAME
+rm -rf pubspec.lock
+flutter packages get
+flutter build apk
+mkdir ~/Builds
+mkdir ~/Builds/$REPO_NAME/
+FILE_NAME=$REPO_NAME:$(date +"%m-%d-%y-%T")".apk"
+mv ./build/app/outputs/apk/release/app-release.apk ~/Builds/$REPO_NAME/$FILE_NA$
+echo "200"
